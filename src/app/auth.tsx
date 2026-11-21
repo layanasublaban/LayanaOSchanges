@@ -1,63 +1,87 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-
-/**
- * Single-user session for the prototype.
- * The real sign-in (Neon Auth + passkey + two-step verification) replaces `signIn` later;
- * the rest of the app only depends on `isSignedIn`, `signIn` and `signOut`.
- */
-const STORAGE_KEY = 'lifeos.session';
+import { authClient, rest } from './lib/neon';
 
 type AuthState = {
+  loading: boolean;
   isSignedIn: boolean;
-  signIn: (email: string) => void;
-  signOut: () => void;
+  email: string | null;
+  signIn: (email: string, password: string) => Promise<string | null>;
+  /** Creates the single owner account. Only works until an owner exists. */
+  signUp: (email: string, password: string) => Promise<string | null>;
+  signOut: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthState | null>(null);
+const Ctx = createContext<AuthState | null>(null);
 
-function readSession(): boolean {
+/** Registers the first signed-in user as owner; returns false for anybody else. */
+async function isOwner(): Promise<boolean> {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) !== null;
+    const claimed = await rest<boolean>('/rpc/claim_owner', { method: 'POST', body: '{}' });
+    return claimed === true;
   } catch {
     return false;
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isSignedIn, setSignedIn] = useState<boolean>(readSession);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState<string | null>(null);
 
-  const signIn = useCallback((email: string) => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, email);
-    } catch {
-      /* storage can be unavailable; the session then lasts until reload */
+  const refresh = useCallback(async () => {
+    const { data } = await authClient.getSession();
+    if (data?.user && (await isOwner())) setEmail(data.user.email);
+    else {
+      if (data?.user) await authClient.signOut();
+      setEmail(null);
     }
-    setSignedIn(true);
+    setLoading(false);
   }, []);
 
-  const signOut = useCallback(() => {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
-    setSignedIn(false);
-  }, []);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
-  const value = useMemo(() => ({ isSignedIn, signIn, signOut }), [isSignedIn, signIn, signOut]);
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const finish = useCallback(async (): Promise<string | null> => {
+    await refresh();
+    const { data } = await authClient.getSession();
+    return data?.user ? null : 'This workspace is private.';
+  }, [refresh]);
+
+  const value = useMemo<AuthState>(
+    () => ({
+      loading,
+      isSignedIn: !!email,
+      email,
+      async signIn(e, p) {
+        const { error } = await authClient.signIn.email({ email: e, password: p });
+        return error ? 'Wrong email or password.' : finish();
+      },
+      async signUp(e, p) {
+        const { error } = await authClient.signUp.email({ email: e, password: p, name: 'Layana' });
+        return error ? (error.message ?? 'Could not create the account.') : finish();
+      },
+      async signOut() {
+        await authClient.signOut();
+        setEmail(null);
+      },
+    }),
+    [loading, email, finish],
+  );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-  return ctx;
+  const v = useContext(Ctx);
+  if (!v) throw new Error('useAuth must be used inside <AuthProvider>');
+  return v;
 }
 
 export function RequireAuth() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, loading } = useAuth();
   const location = useLocation();
+  if (loading) return <p className="p-8 text-sm text-ink-2">Loading…</p>;
   if (!isSignedIn) return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
   return <Outlet />;
 }
