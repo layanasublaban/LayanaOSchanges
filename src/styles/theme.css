@@ -1,0 +1,71 @@
+/*
+ * Life OS design tokens — mirrored from the Figma file "LayanaOS_System"
+ * (variable collections: Life OS Color / Spacing / Radius, plus text and effect styles).
+ */
+@theme {
+  --font-heading: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-soft: #f7f8fa;
+  --color-hero: #f7f5ff;
+  --color-accent-faint: #f4f6ff;
+
+  --color-ink: #17191f;
+  --color-ink-2: #515766;
+  --color-ink-3: #6c727e;
+
+  --color-line: #e7e9ee;
+  --color-line-subtle: #f0f1f4;
+
+  --color-accent: #5462c3;
+  --color-accent-hover: #4b58af;
+  --color-accent-soft: #e9edff;
+
+  --color-success-bg: #e7f2eb;
+  --color-success-fg: #4e715b;
+  --color-warning-bg: #fff2d9;
+  --color-warning-fg: #8e6323;
+  --color-danger-bg: #fcebed;
+  --color-danger-fg: #985660;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-card: 0 1px 2px rgb(23 25 31 / 0.04), 0 8px 24px rgb(23 25 31 / 0.05);
+  --shadow-raised: 0 12px 32px rgb(100 117 232 / 0.2);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    margin: 0;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  input,
+  textarea {
+    font-family: inherit;
+  }
+}
