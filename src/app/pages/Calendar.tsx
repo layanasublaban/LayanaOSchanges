@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Trash2, Video } from 'lucide-react';
 import { PageHeader } from '../components/AppShell';
 import { Badge, Button, Card, Chip, Field, SectionTitle } from '../components/ui';
@@ -35,11 +35,18 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const toDateInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 export default function Calendar() {
-  const { rows, loading, error, add, remove } = useTable<EventRow>('events', 'select=*&order=starts_at.asc');
+  const { rows, loading, error, add, update, remove } = useTable<EventRow>('events', 'select=*&order=starts_at.asc');
   const [filter, setFilter] = useState<Space | 'All' | 'Meetings'>('All');
   const [weekOffset, setWeekOffset] = useState(0);
   const [selected, setSelected] = useState((new Date().getDay() + 6) % 7);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<EventRow | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+  const startEdit = (e: EventRow) => {
+    setOpen(false);
+    setEditing(e);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
 
   const monday = useMemo(() => {
     const m = mondayOf(new Date());
@@ -58,25 +65,32 @@ export default function Calendar() {
   const agenda = inWeek(selected);
   const meetings = rows.filter((e) => e.is_meeting && new Date(e.ends_at) >= new Date()).slice(0, 5);
 
-  const label = `${monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })} – ${sunday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  const label = `${monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${sunday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
     <>
       <PageHeader eyebrow={label} title="Calendar">
-        <Button plus onClick={() => setOpen((o) => !o)}>
-          New event
+        <Button plus onClick={() => { setEditing(null); setOpen((o) => !o); }}>
+          <span className="hidden sm:inline">New event</span><span className="sm:hidden">New</span>
         </Button>
       </PageHeader>
 
-      {open && (
-        <NewEvent
-          defaultDate={toDateInput(new Date(monday.getTime() + selected * 86400000))}
-          onCancel={() => setOpen(false)}
-          onSave={async (v) => {
-            await add(v);
-            setOpen(false);
-          }}
-        />
+      {(open || editing) && (
+        <div ref={formRef}>
+          <EventForm
+            key={editing?.id ?? 'new'}
+            initial={editing}
+            defaultDate={toDateInput(new Date(monday.getTime() + selected * 86400000))}
+            onCancel={() => { setOpen(false); setEditing(null); }}
+            onDelete={editing ? async () => { await remove(editing.id); setEditing(null); } : undefined}
+            onSave={async (v) => {
+              if (editing) await update(editing.id, v);
+              else await add(v);
+              setOpen(false);
+              setEditing(null);
+            }}
+          />
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -85,7 +99,7 @@ export default function Calendar() {
             {f}
           </Chip>
         ))}
-        <span className="ml-auto flex gap-2">
+        <span className="flex w-full justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end">
           <Button variant="secondary" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week">
             ‹
           </Button>
@@ -130,15 +144,17 @@ export default function Calendar() {
                 const start = Math.max(decimalHour(e.start), FIRST_HOUR);
                 const dur = Math.max((e.end.getTime() - e.start.getTime()) / 3600000, 0.5);
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={e.id}
-                    className={cn('absolute inset-x-1 overflow-hidden rounded-md px-2 py-1 text-xs font-medium', SPACE_STYLE[e.space])}
+                    onClick={() => startEdit(e)}
+                    className={cn('absolute inset-x-1 cursor-pointer overflow-hidden rounded-md border-0 px-2 py-1 text-left text-xs font-medium', SPACE_STYLE[e.space])}
                     style={{ top: (start - FIRST_HOUR) * ROW, height: dur * ROW - 2 }}
                     title={`${e.title} · ${formatHour(decimalHour(e.start))}`}
                   >
                     {e.is_meeting && <Video size={11} className="mr-1 inline" aria-hidden />}
                     {e.title}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -169,10 +185,10 @@ export default function Calendar() {
           {agenda.map((e) => (
             <div key={e.id} className="flex items-center gap-3 py-3">
               <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', SPACE_DOT[e.space])} aria-hidden />
-              <div className="flex min-w-0 flex-1 flex-col">
+              <button type="button" onClick={() => startEdit(e)} className="flex min-w-0 flex-1 flex-col border-0 bg-transparent p-0 text-left">
                 <span className="text-sm font-medium text-ink">{e.title}</span>
-                <span className="text-xs text-ink-2">{formatHour(decimalHour(e.start))} · {e.space}</span>
-              </div>
+                <span className="text-xs text-ink-2">{formatHour(decimalHour(e.start))} · {e.space}{e.is_meeting ? ' · Meeting' : ''}</span>
+              </button>
               <button type="button" aria-label={`Delete ${e.title}`} onClick={() => void remove(e.id)} className="border-0 bg-transparent text-ink-3">
                 <Trash2 size={16} />
               </button>
@@ -193,6 +209,7 @@ export default function Calendar() {
                 {new Date(m.starts_at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
+            <button type="button" onClick={() => startEdit(m)} className="border-0 bg-transparent text-[13px] font-medium text-ink-2">Edit</button>
             {m.meet_url ? (
               <a href={m.meet_url} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent">Join</a>
             ) : (
@@ -205,21 +222,31 @@ export default function Calendar() {
   );
 }
 
-function NewEvent({
+const hhmm = (iso: string) => {
+  const d = new Date(iso);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+function EventForm({
+  initial,
   defaultDate,
   onSave,
   onCancel,
+  onDelete,
 }: {
+  initial: EventRow | null;
   defaultDate: string;
   onSave: (v: Partial<EventRow>) => Promise<void>;
   onCancel: () => void;
+  onDelete?: () => Promise<void>;
 }) {
-  const [title, setTitle] = useState('');
-  const [space, setSpace] = useState<Space>('Business');
-  const [date, setDate] = useState(defaultDate);
-  const [start, setStart] = useState('10:00');
-  const [end, setEnd] = useState('11:00');
-  const [meeting, setMeeting] = useState(false);
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [space, setSpace] = useState<Space>(initial?.space ?? 'Business');
+  const [date, setDate] = useState(initial ? toDateInput(new Date(initial.starts_at)) : defaultDate);
+  const [start, setStart] = useState(initial ? hhmm(initial.starts_at) : '10:00');
+  const [end, setEnd] = useState(initial ? hhmm(initial.ends_at) : '11:00');
+  const [meeting, setMeeting] = useState(initial?.is_meeting ?? false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [problem, setProblem] = useState('');
 
   async function submit(e: FormEvent) {
@@ -237,6 +264,7 @@ function NewEvent({
 
   return (
     <Card>
+      <h2 className="mb-4 text-[18px] leading-6">{initial ? 'Edit event' : 'New event'}</h2>
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
         <Field className="sm:col-span-2" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Client call with…" />
         <Field label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -256,8 +284,14 @@ function NewEvent({
         </label>
         {problem && <p role="alert" className="m-0 text-[13px] text-danger-fg sm:col-span-2">{problem}</p>}
         <div className="flex gap-2 sm:col-span-2">
-          <Button type="submit">Save event</Button>
+          <Button type="submit">{initial ? 'Save changes' : 'Save event'}</Button>
           <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+          {onDelete && !confirmDelete && (
+            <Button variant="ghost" className="ml-auto text-danger-fg" onClick={() => setConfirmDelete(true)}>Delete</Button>
+          )}
+          {onDelete && confirmDelete && (
+            <Button variant="ghost" className="ml-auto bg-danger-bg text-danger-fg" onClick={() => void onDelete()}>Confirm delete</Button>
+          )}
         </div>
       </form>
     </Card>

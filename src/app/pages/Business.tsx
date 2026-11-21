@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/AppShell';
-import { Button, Card, SectionTitle } from '../components/ui';
+import { Card, SectionTitle, SampleNote } from '../components/ui';
 import { InitialAvatar, ListRow, ProgressRow, StatCard, StatGrid } from '../components/rows';
 import { clients, contracts, invoices, projects } from '../data/mock';
 
@@ -7,10 +7,8 @@ export default function Business() {
   return (
     <>
       <PageHeader eyebrow="Space" title="Business">
-        <Button plus className="hidden lg:inline-flex">
-          New client
-        </Button>
       </PageHeader>
+      <SampleNote />
 
       <StatGrid>
         <StatCard label="Active clients" value="4" caption="2 new this month" />

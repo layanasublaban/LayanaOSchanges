@@ -244,3 +244,13 @@ export function Field({
     </label>
   );
 }
+
+/* ---------- Sample-data notice (pages not yet connected to the database) ---------- */
+
+export function SampleNote() {
+  return (
+    <p className="m-0 rounded-md bg-warning-bg px-3 py-2 text-[13px] text-warning-fg">
+      Sample data for now. This page is not saved to your database yet.
+    </p>
+  );
+}

@@ -50,9 +50,9 @@ export const lensiyanaPosts: UpcomingEvent[] = [
 ];
 
 export const spaces = [
-  { to: '/personal', key: 'personal', title: 'Personal', meta: '78% habits this week' },
-  { to: '/business', key: 'business', title: 'Business', meta: '4 active projects' },
-  { to: '/lensiyana', key: 'lensiyana', title: 'Lensiyana', meta: '3 posts scheduled' },
+  { to: '/personal', key: 'personal', title: 'Personal', meta: 'Habits, goals, weekend' },
+  { to: '/business', key: 'business', title: 'Business', meta: 'Clients, projects, invoices' },
+  { to: '/lensiyana', key: 'lensiyana', title: 'Lensiyana', meta: 'Content pipeline' },
 ] as const;
 
 /* ---------------- calendar ---------------- */

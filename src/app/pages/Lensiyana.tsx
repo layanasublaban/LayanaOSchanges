@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/AppShell';
-import { Badge, Button, Card, Eyebrow, SectionTitle } from '../components/ui';
+import { Badge, Card, Eyebrow, SectionTitle, SampleNote } from '../components/ui';
 import { EventRow } from '../components/rows';
 import { lensiyanaPosts, pipeline } from '../data/mock';
 
@@ -7,10 +7,8 @@ export default function Lensiyana() {
   return (
     <>
       <PageHeader eyebrow="Space" title="Lensiyana">
-        <Button plus className="hidden lg:inline-flex">
-          New idea
-        </Button>
       </PageHeader>
+      <SampleNote />
 
       <section aria-label="Content pipeline" className="flex flex-col gap-3">
         <SectionTitle title="Content pipeline" />

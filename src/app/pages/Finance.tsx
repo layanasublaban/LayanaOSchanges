@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/AppShell';
-import { Card, SectionTitle } from '../components/ui';
+import { Card, SectionTitle, SampleNote } from '../components/ui';
 import { ListRow, ProgressRow, StatCard, StatGrid } from '../components/rows';
 import { budgets, cashFlow, transactions } from '../data/mock';
 
@@ -9,6 +9,7 @@ export default function Finance() {
   return (
     <>
       <PageHeader eyebrow="Manage" title="Finance" />
+      <SampleNote />
 
       <StatGrid>
         <StatCard label="Income" value="$6,400" caption="November" />

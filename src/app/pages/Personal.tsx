@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PageHeader } from '../components/AppShell';
-import { Card, ProgressBar, SectionTitle } from '../components/ui';
+import { Card, ProgressBar, SectionTitle, SampleNote } from '../components/ui';
 import { ChecklistRow, EventRow, ProgressRow } from '../components/rows';
 import { goals, habits, weekendPersonal, type Task } from '../data/mock';
 
@@ -12,6 +12,7 @@ export default function Personal() {
   return (
     <>
       <PageHeader eyebrow="Space" title="Personal" />
+      <SampleNote />
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] lg:gap-7">
         <Card className="flex flex-col gap-3">
           <SectionTitle title="Habits today" />

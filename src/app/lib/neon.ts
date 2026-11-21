@@ -31,3 +31,20 @@ export async function rest<T = unknown>(path: string, init: RequestInit = {}): P
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
 }
+
+export const ASSISTANT_URL =
+  import.meta.env.VITE_ASSISTANT_URL ?? 'https://br-weathered-rain-b9s2ocjb-assistant.compute.c-7.eu-central-1.aws.neon.tech/';
+
+export type ChatTurn = { role: 'user' | 'assistant'; content: string };
+
+/** Sends the conversation to the assistant function, which can create/edit events and tasks for real. */
+export async function askAssistant(messages: ChatTurn[]): Promise<{ reply: string; actions: string[] }> {
+  const res = await fetch(ASSISTANT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
+    body: JSON.stringify({ messages, now: new Date().toString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `Assistant error ${res.status}`);
+  return body;
+}
