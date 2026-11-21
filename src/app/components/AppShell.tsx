@@ -5,7 +5,7 @@ import {
   Briefcase,
   CalendarDays,
   Heart,
-  House,
+  Home,
   MessageSquare,
   SlidersHorizontal,
   Sparkles,
@@ -18,7 +18,7 @@ import { Avatar } from './ui';
 type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
 
 const OVERVIEW: NavItem[] = [
-  { to: '/', label: 'Home', icon: House, end: true },
+  { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/assistant', label: 'AI Assistant', icon: MessageSquare },
 ];
@@ -30,7 +30,7 @@ const SPACES: NavItem[] = [
 const MANAGE: NavItem[] = [{ to: '/finance', label: 'Finance', icon: Wallet }];
 
 const TABS: NavItem[] = [
-  { to: '/', label: 'Home', icon: House, end: true },
+  { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/assistant', label: 'Assistant', icon: MessageSquare },
   { to: '/business', label: 'Business', icon: Briefcase },
