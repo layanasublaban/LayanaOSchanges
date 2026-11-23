@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/AppShell';
 import { Button, Card, Eyebrow, Toggle } from '../components/ui';
-import { useAuth } from '../auth';
 
 export default function Settings() {
-  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [prefs, setPrefs] = useState({ calendar: true, digest: true, passkey: false });
 
@@ -36,20 +34,6 @@ export default function Settings() {
               </div>
             ))}
           </div>
-        </Card>
-        <Card className="flex flex-col gap-3">
-          <Eyebrow>Account</Eyebrow>
-          <p className="m-0 text-sm text-ink-2">Signed in as the only user of this workspace.</p>
-          <Button
-            variant="secondary"
-            className="self-start"
-            onClick={() => {
-              signOut();
-              navigate('/sign-in', { replace: true });
-            }}
-          >
-            Sign out
-          </Button>
         </Card>
       </div>
     </>

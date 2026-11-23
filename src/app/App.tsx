@@ -1,7 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider, RequireAuth } from './auth';
 import { AppShell } from './components/AppShell';
-import SignIn from './pages/SignIn';
 import Home from './pages/Home';
 import Calendar from './pages/Calendar';
 import Assistant from './pages/Assistant';
@@ -15,10 +13,7 @@ import More from './pages/More';
 export default function App() {
   return (
     <HashRouter>
-      <AuthProvider>
         <Routes>
-          <Route path="/sign-in" element={<SignIn />} />
-          <Route element={<RequireAuth />}>
             <Route element={<AppShell />}>
               <Route index element={<Home />} />
               <Route path="calendar" element={<Calendar />} />
@@ -30,10 +25,8 @@ export default function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="more" element={<More />} />
             </Route>
-          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
     </HashRouter>
   );
 }

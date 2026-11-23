@@ -4,7 +4,7 @@ import { Mic, Send, Square, Volume2, VolumeX } from 'lucide-react';
 import { PageHeader } from '../components/AppShell';
 import { Badge, Card, Eyebrow, Toggle } from '../components/ui';
 import { cn } from '../lib/cn';
-import { askAssistant, rest, type ChatTurn } from '../lib/neon';
+import { askAssistant, type ChatTurn } from '../lib/neon';
 import { useVoice } from '../lib/useVoice';
 import { permissions, standingApprovals } from '../data/mock';
 
@@ -35,7 +35,8 @@ export default function Assistant() {
 
   async function save(turn: ChatTurn) {
     try {
-      await rest('/chat_messages', { method: 'POST', body: JSON.stringify(turn) });
+      const old = JSON.parse(localStorage.getItem('lifeos.chat') || '[]');
+      localStorage.setItem('lifeos.chat', JSON.stringify([...old, turn].slice(-40)));
     } catch {
       /* history is a convenience; never block the chat */
     }
@@ -76,8 +77,7 @@ export default function Assistant() {
   useEffect(() => {
     (async () => {
       try {
-        const rows = await rest<ChatTurn[]>('/chat_messages?select=role,content&order=created_at.desc&limit=20');
-        const old = rows.reverse();
+        const old = (JSON.parse(localStorage.getItem('lifeos.chat') || '[]') as ChatTurn[]).slice(-20);
         history.current = old;
         if (old.length) setMessages([GREETING, ...old]);
       } catch {
