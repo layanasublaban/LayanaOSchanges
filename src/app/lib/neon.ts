@@ -8,11 +8,15 @@ export const DATA_URL =
   import.meta.env.VITE_NEON_DATA_URL ??
   'https://ep-bitter-pond-b9ujp2cs.apirest.c-7.eu-central-1.aws.neon.tech/neondb/rest/v1';
 
-export const authClient = createAuthClient(AUTH_URL);
+export const authClient = createAuthClient(AUTH_URL, { fetchOptions: { credentials: 'include' } });
 
 async function token(): Promise<string> {
+  // Prefer the JWT the session already carries; fall back to the token endpoint.
+  const sess = await authClient.getSession();
+  const fromSession = (sess.data as { session?: { token?: string } } | null)?.session?.token;
+  if (fromSession && fromSession.split('.').length === 3) return fromSession;
   const { data, error } = await authClient.token();
-  if (error || !data?.token) throw new Error('Not signed in');
+  if (error || !data?.token) throw new Error('Not signed in (no token from Neon Auth)');
   return data.token;
 }
 
