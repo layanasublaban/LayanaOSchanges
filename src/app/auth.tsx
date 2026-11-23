@@ -15,11 +15,15 @@ type AuthState = {
 const Ctx = createContext<AuthState | null>(null);
 
 /** Registers the first signed-in user as owner; returns false for anybody else. */
+let lastOwnerError = '';
 async function isOwner(): Promise<boolean> {
+  lastOwnerError = '';
   try {
     const claimed = await rest<boolean>('/rpc/claim_owner', { method: 'POST', body: '{}' });
+    if (claimed !== true) lastOwnerError = 'owner check returned ' + String(claimed);
     return claimed === true;
-  } catch {
+  } catch (e) {
+    lastOwnerError = e instanceof Error ? e.message : String(e);
     return false;
   }
 }
@@ -32,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await authClient.getSession();
     if (data?.user && (await isOwner())) setEmail(data.user.email);
     else {
-      if (data?.user) await authClient.signOut();
+      // keep the session while we report why, so the real reason is not lost
       setEmail(null);
     }
     setLoading(false);
@@ -45,7 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const finish = useCallback(async (): Promise<string | null> => {
     await refresh();
     const { data } = await authClient.getSession();
-    return data?.user ? null : 'This workspace is private.';
+    if (!data?.user) return 'Sign-in did not complete. Please try again.';
+    return lastOwnerError ? 'Signed in, but the owner check failed: ' + lastOwnerError : null;
   }, [refresh]);
 
   const value = useMemo<AuthState>(
