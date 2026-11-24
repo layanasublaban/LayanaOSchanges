@@ -6,6 +6,7 @@ function env(k, d) {
   return process.env[k] || d || '';
 }
 
+var workingModel = '';
 var GATEWAY = 'https://br-weathered-rain-b9s2ocjb-api.ai.c-7.eu-central-1.aws.neon.tech';
 
 function cors(req) {
@@ -74,7 +75,7 @@ var server = {
   async fetch(req) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
     if (req.method === 'GET') {
-      return json(req, { ok: true, gateway: !!env('AI_GATEWAY_TOKEN'), passcode: !!env('ASSISTANT_PASSCODE') });
+      return json(req, { ok: true, gateway: !!env('AI_GATEWAY_TOKEN'), passcode: !!env('ASSISTANT_PASSCODE'), model: workingModel || env('MODEL'), version: 8 });
     }
     if (!passOk(req.headers.get('x-passcode'))) return json(req, { error: 'Wrong passcode' }, 401);
     try {
@@ -83,13 +84,27 @@ var server = {
       var timezone = input.timezone || 'Asia/Amman';
       var messages = (input.messages || []).slice(-40);
       var convo = [{ role: 'system', content: systemPrompt(now, timezone) }].concat(messages);
-      var r = await fetch(env('NEON_AI_GATEWAY_BASE_URL', GATEWAY) + '/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env('AI_GATEWAY_TOKEN') },
-        body: JSON.stringify({ model: env('MODEL', 'claude-sonnet-4-6'), messages: convo, tools: TOOLS, max_tokens: 1024 })
-      });
-      var text = await r.text();
-      if (!r.ok) return json(req, { error: 'AI gateway ' + r.status + ': ' + text.slice(0, 300) }, 502);
+      var aiUrl = env('AI_BASE_URL') ? env('AI_BASE_URL') + '/chat/completions' : env('NEON_AI_GATEWAY_BASE_URL', GATEWAY) + '/v1/chat/completions';
+      var tried = [];
+      var candidates = [workingModel || env('MODEL', 'gemini-3.8-flash'), 'gemini-3.8-flash', 'gemini-flash-latest'];
+      var r, text, used;
+      while (candidates.length && tried.length < 4) {
+        used = candidates.shift();
+        if (!used || tried.indexOf(used) !== -1) continue;
+        tried.push(used);
+        r = await fetch(aiUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env('AI_GATEWAY_TOKEN') },
+          body: JSON.stringify({ model: used, messages: convo, tools: TOOLS, max_tokens: 1024 })
+        });
+        text = await r.text();
+        if (r.ok) { workingModel = used; break; }
+        // Retired model: use the replacement the provider names, then keep it.
+        var m = /use (?:models\/)?([a-z0-9][a-z0-9.\-]+)/i.exec(text);
+        if ((r.status === 404 || r.status === 400) && m) candidates.unshift(m[1]);
+        else if (r.status !== 404) break;
+      }
+      if (!r.ok) return json(req, { error: 'AI ' + r.status + ' (tried ' + tried.join(', ') + '): ' + text.slice(0, 300) }, 502);
       var data = JSON.parse(text);
       return json(req, { message: data.choices[0].message });
     } catch (e) {
